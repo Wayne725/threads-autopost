@@ -14,8 +14,8 @@ class ThreadsAPIError(RuntimeError):
 
 class ThreadsClient:
     def __init__(self, access_token: str, user_id: str = "me", publish_delay: float = 3.0, timeout: float = 30.0):
-        self.access_token = access_token
-        self.user_id = user_id
+        self.access_token = access_token.strip()
+        self.user_id = user_id.strip() or "me"
         self.publish_delay = publish_delay
         self.timeout = timeout
         self.session = requests.Session()

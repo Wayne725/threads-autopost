@@ -9,10 +9,11 @@ from .threads_api import ThreadsClient
 
 
 def make_client() -> ThreadsClient:
-    token = os.environ.get("THREADS_ACCESS_TOKEN")
+    token = (os.environ.get("THREADS_ACCESS_TOKEN") or "").strip()
     if not token:
         sys.exit("缺少環境變數 THREADS_ACCESS_TOKEN")
-    return ThreadsClient(token, user_id=os.environ.get("THREADS_USER_ID", "me"))
+    user_id = (os.environ.get("THREADS_USER_ID") or "").strip() or "me"
+    return ThreadsClient(token, user_id=user_id)
 
 
 def main() -> None:

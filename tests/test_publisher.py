@@ -4,7 +4,9 @@ import pandas as pd
 import pytest
 
 from autopost import publisher
+from autopost.__main__ import make_client
 from autopost.store import COLUMNS, load_queue, now_iso, save_queue
+from autopost.threads_api import ThreadsClient
 
 
 class FakeClient:
@@ -143,3 +145,21 @@ def test_load_rejects_duplicate_post_id(queue_path):
     make_queue(queue_path, [{"post_id": "p1", "status": "draft", "text": "a"}, {"post_id": "p1", "status": "draft", "text": "b"}])
     with pytest.raises(ValueError, match="post_id 重複"):
         load_queue(queue_path)
+
+
+def test_recovery_counts_toward_max_posts(queue_path):
+    make_queue(queue_path, [
+        {"post_id": "p1", "status": "publishing", "text": "第一篇未完成"},
+        {"post_id": "p2", "status": "approved", "text": "第二篇完全不同的主題"},
+    ])
+    client = FakeClient()
+    publisher.run(queue_path, client, live=True, max_posts=1)
+    assert load_queue(queue_path).status.tolist() == ["posted", "approved"]
+
+
+def test_empty_user_id_falls_back_to_me(monkeypatch):
+    monkeypatch.setenv("THREADS_ACCESS_TOKEN", "dummy-token")
+    monkeypatch.setenv("THREADS_USER_ID", "")
+    client = make_client()
+    assert client.user_id == "me"
+    assert ThreadsClient("dummy-token", user_id="   ").user_id == "me"

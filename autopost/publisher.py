@@ -76,12 +76,13 @@ def run(path: str | Path, client: Client | None, live: bool, max_posts: int = 1)
     now = pd.Timestamp.now(tz=TAIPEI)
     log = []
 
+    sent = 0
     if live:
         for idx in queue.index[queue.status == "publishing"]:
             publish_row(queue, idx, client, path, recovering=True)
             log.append(f"[補完] {queue.at[idx, 'post_id']}：上次中斷，已補完發布")
+            sent += 1
 
-    sent = 0
     for idx in queue.index[queue.status == "approved"]:
         if sent >= max_posts:
             break

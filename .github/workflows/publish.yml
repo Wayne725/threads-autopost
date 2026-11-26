@@ -2,9 +2,9 @@ name: Threads 排程發文
 
 on:
   schedule:
-    # GitHub 用 UTC：04:00 = 台北 12:00，13:00 = 台北 21:00（排程可能延遲幾分鐘）
-    - cron: "0 4 * * *"
-    - cron: "0 13 * * *"
+    # GitHub 用 UTC：04:17 = 台北 12:17，13:17 = 台北 21:17（避開整點排程壅塞）
+    - cron: "17 4 * * *"
+    - cron: "17 13 * * *"
   workflow_dispatch:
 
 # 同時只跑一個，避免兩個工作搶同一篇
@@ -32,7 +32,7 @@ jobs:
         run: python -m autopost publish ${{ vars.THREADS_LIVE == 'true' && '--live' || '' }}
         env:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
-          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID || 'me' }}
 
       # 就算發文失敗也要把已寫入的狀態存回 repo，下次才不會重發
       - name: 存回佇列狀態
