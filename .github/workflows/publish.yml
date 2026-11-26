@@ -27,6 +27,18 @@ jobs:
 
       - run: pip install pandas requests
 
+      # 庫存低於 6 篇 approved 時自動用高科 iAI（或 Gemini）補貨到 10 篇
+      - name: 自動補齊不重複草稿
+        if: env.LLM_API_KEY != '' || env.GEMINI_API_KEY != ''
+        continue-on-error: true
+        run: python -m autopost generate --min-queue 6 --target-queue 10 --status approved
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || '' }}
+
       # 預設試跑；在 repo 的 Variables 設 THREADS_LIVE=true 才會真的發文
       - name: 發文
         run: python -m autopost publish ${{ vars.THREADS_LIVE == 'true' && '--live' || '' }}

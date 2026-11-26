@@ -1,0 +1,67 @@
+name: 自動生成不重複草稿
+
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "本次強制生成篇數（留空則依庫存門檻自動補到 10 篇）"
+        required: false
+        default: ""
+      status:
+        description: "生成後的狀態"
+        required: false
+        type: choice
+        options:
+          - approved
+          - draft
+        default: approved
+      dry_run:
+        description: "只預覽不寫入 posts.csv"
+        required: false
+        type: boolean
+        default: false
+
+# 與發文排程共用 concurrency，避免同時改寫 posts.csv
+concurrency:
+  group: threads-publisher
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pandas requests
+
+      - name: 生成不重複草稿
+        run: |
+          args=(--status "${{ inputs.status }}")
+          if [ -n "${{ inputs.count }}" ]; then
+            args+=(--count "${{ inputs.count }}")
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          python -m autopost generate "${args[@]}"
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || '' }}
+
+      - name: 存回新草稿
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add posts.csv
+          git diff --cached --quiet || (git commit -m "chore: 自動補齊不重複草稿" && git push)
